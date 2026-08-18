@@ -42,9 +42,13 @@ DB_ID="$(npx wrangler d1 list --json | node -e '
   let raw = "";
   process.stdin.on("data", (chunk) => (raw += chunk));
   process.stdin.on("end", () => {
-    const match = JSON.parse(raw).find((db) => db.name === process.argv[1]);
-    if (!match) { console.error("database not found"); process.exit(1); }
-    process.stdout.write(match.uuid);
+    const list = JSON.parse(raw);
+    const match = list.find((db) => db.name === process.argv[1]);
+    if (!match) { console.error("database not found: " + process.argv[1]); process.exit(1); }
+    // Wrangler has spelled this field both ways across versions.
+    const id = match.uuid || match.database_id || match.id;
+    if (!id) { console.error("no id on: " + JSON.stringify(match)); process.exit(1); }
+    process.stdout.write(id);
   });
 ' "$DB_NAME")"
 echo "database_id: $DB_ID"
@@ -60,24 +64,27 @@ node -e '
 ' "$CONFIG" "$DB_ID" "$DOMAIN"
 grep -E '"database_id"|"EMAIL_DOMAIN"' "$CONFIG"
 
-step "Setting SESSION_SECRET"
-# Only set it if the Worker does not already have one, so re-running does not
-# invalidate everyone's sessions.
-if npx wrangler secret list 2>/dev/null | grep -q SESSION_SECRET; then
-  echo "SESSION_SECRET is already set; leaving it alone."
-else
-  node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))' \
-    | npx wrangler secret put SESSION_SECRET
-fi
-
 step "Applying migrations to the remote database"
 npx wrangler d1 migrations apply "$DB_NAME" --remote
 
 step "Building the front end"
 npm run build
 
+# The Worker has to exist before a secret can be attached to it, so the first
+# deploy comes first. Secrets bind at runtime, so no redeploy is needed after.
 step "Deploying"
 npx wrangler deploy
+
+step "Setting SESSION_SECRET"
+# Only set it if the Worker does not already have one: re-running this script
+# must not invalidate everyone's live sessions.
+if npx wrangler secret list 2>/dev/null | grep -q SESSION_SECRET; then
+  echo "SESSION_SECRET is already set; leaving it alone."
+else
+  echo "Generating a new SESSION_SECRET..."
+  node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))' \
+    | npx wrangler secret put SESSION_SECRET
+fi
 
 cat <<DONE
 
