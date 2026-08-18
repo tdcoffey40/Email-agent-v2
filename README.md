@@ -89,7 +89,19 @@ npm run dev:worker   # Worker + D1 + email handler on :8787
 
 ### Deploy
 
+The scripted path — creates the D1 database, writes its id and your domain
+into `wrangler.jsonc`, generates `SESSION_SECRET`, migrates, builds and
+deploys. Safe to re-run:
+
 ```bash
+npx wrangler login                 # interactive, needs a browser
+./scripts/setup-cloudflare.sh your-domain.com
+```
+
+Or do it by hand:
+
+```bash
+npx wrangler d1 create email_agent_db   # put the id in wrangler.jsonc
 npx wrangler secret put SESSION_SECRET      # required
 npx wrangler secret put CF_API_TOKEN        # optional, see below
 npx wrangler secret put CF_ZONE_ID
