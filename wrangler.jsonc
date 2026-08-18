@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "email-agent-v2",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2025-03-10",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The Worker serves the built React SPA, the JSON API, and the inbound
+  // email handler. One Worker, three entry points.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  "observability": { "enabled": true },
+
+  "vars": {
+    "APP_NAME": "Email Agents",
+    // Every agent gets <local-part>@EMAIL_DOMAIN. Must be a zone with
+    // Cloudflare Email Routing enabled.
+    "EMAIL_DOMAIN": "example.com",
+    "DEFAULT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "email_agent_db",
+      // Replace with the id printed by: wrangler d1 create email_agent_db
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Workers AI powers agent replies out of the box, so the whole stack can
+  // run on Cloudflare alone. Set ANTHROPIC_API_KEY to unlock Claude models.
+  "ai": { "binding": "AI" }
+
+  // Secrets (set with `wrangler secret put <NAME>`):
+  //   SESSION_SECRET       - random 32+ byte string, signs session cookies
+  //   CF_API_TOKEN         - token with Zone:Email Routing Rules:Edit
+  //   CF_ZONE_ID           - zone id for EMAIL_DOMAIN
+  //   ANTHROPIC_API_KEY    - optional, enables Claude models
+}

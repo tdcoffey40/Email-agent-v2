@@ -1,0 +1,12 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit the real file.
+
+# Signs session cookies. Generate with: openssl rand -hex 32
+SESSION_SECRET="dev-only-secret-change-me-0123456789abcdef"
+
+# Cloudflare API credentials used to provision Email Routing rules.
+# Token needs the "Email Routing Rules: Edit" permission on the zone.
+CF_API_TOKEN=""
+CF_ZONE_ID=""
+
+# Optional. Set to enable Claude models alongside Workers AI.
+ANTHROPIC_API_KEY=""
